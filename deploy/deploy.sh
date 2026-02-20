@@ -129,8 +129,23 @@ show_tunnel_url() {
   fi
 }
 
+# ── .env 检查 ──
+ensure_env() {
+  if [ ! -f "$SCRIPT_DIR/.env" ]; then
+    if [ -f "$SCRIPT_DIR/.env.example" ]; then
+      cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
+      echo "⚠️  已从 .env.example 创建 .env，请编辑填入 LiveKit 等配置："
+      echo "   vim $SCRIPT_DIR/.env"
+      echo ""
+    else
+      echo "❌ 找不到 .env 和 .env.example"; exit 1
+    fi
+  fi
+}
+
 # ── 命令 ──
 cmd_deploy() {
+  ensure_env
   echo "🔨 构建镜像..."
   $COMPOSE build
 
@@ -146,6 +161,7 @@ cmd_deploy() {
 }
 
 cmd_start() {
+  ensure_env
   echo "🚀 启动容器..."
   $COMPOSE up -d
   start_tunnel
@@ -160,6 +176,7 @@ cmd_stop() {
 }
 
 cmd_restart() {
+  ensure_env
   echo "🔄 重启..."
   stop_tunnel
   $COMPOSE up -d --build

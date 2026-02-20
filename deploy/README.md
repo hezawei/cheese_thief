@@ -23,16 +23,18 @@ scp -r ./deskgame user@server:/opt/deskgame
 
 ```bash
 cd /opt/deskgame/deploy
-cp .env.production .env.production.local   # 可选：自定义配置
-vim .env.production
+cp .env.example .env    # 首次部署需要，deploy.sh 也会自动创建
+vim .env                # 填入 LiveKit 凭据等配置
 ```
+
+> `.env` 是实际配置文件（gitignored，不会被 git pull 覆盖）
+> `.env.example` 是模板（跟随代码更新）
 
 **必须配置项：**
 - 如果需要语音聊天，填写 `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`
 - 不需要语音则留空即可
 
 **可选配置项：**
-- `WEB_PORT` — 外部访问端口，默认 `80`
 - `NIGHT_ACTION_SECONDS` 等 — 游戏计时参数
 
 ### 3. 一键启动
@@ -43,13 +45,7 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
-或手动执行：
-
-```bash
-cd /opt/deskgame/deploy
-docker compose build
-docker compose up -d
-```
+`deploy.sh` 会自动：构建镜像 → 启动容器 → 启动 HTTPS 隧道 → 显示游戏地址。
 
 ### 4. 访问游戏
 

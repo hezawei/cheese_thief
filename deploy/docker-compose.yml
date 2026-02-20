@@ -7,7 +7,7 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile
       target: server
-    env_file: .env.production
+    env_file: .env
     restart: unless-stopped
     expose:
       - "3001"
