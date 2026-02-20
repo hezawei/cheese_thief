@@ -26,12 +26,12 @@ RUN npm ci
 COPY shared/ ./shared/
 COPY server/package.json server/package-lock.json ./server/
 WORKDIR /app/server
-RUN npm ci
+RUN npm ci && npm install --no-save esbuild
 COPY server/ ./
 
 # Bundle: inline dotenv + shared code, keep npm packages external
 RUN npx esbuild src/index.ts --bundle --platform=node --target=node20 \
-    --outfile=dist/index.cjs \
+    --format=cjs --outfile=dist/index.cjs \
     --external:express --external:cors --external:socket.io \
     --external:livekit-server-sdk --external:uuid
 
