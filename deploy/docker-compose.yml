@@ -1,5 +1,8 @@
+name: cheese-thief
+
 services:
   server:
+    container_name: cheese-thief-server
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -8,8 +11,11 @@ services:
     restart: unless-stopped
     expose:
       - "3001"
+    networks:
+      - cheese-net
 
   web:
+    container_name: cheese-thief-web
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -19,3 +25,9 @@ services:
     depends_on:
       - server
     restart: unless-stopped
+    networks:
+      - cheese-net
+
+networks:
+  cheese-net:
+    driver: bridge
