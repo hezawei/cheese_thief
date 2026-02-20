@@ -1,4 +1,4 @@
-import { Room, RoomEvent, Track, ConnectionState, type Participant } from 'livekit-client'
+import { Room, RoomEvent, Track, ConnectionState, type Participant, type RemoteTrackPublication, type RemoteTrack } from 'livekit-client'
 import { getSocket } from './socket'
 import { C2S, S2C } from '@shared/events'
 
@@ -75,7 +75,21 @@ export function connectVoice(): void {
         update({ connected: false, connecting: false, activeSpeakers: new Set() })
       })
 
+      newRoom.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication) => {
+        if (track.kind === Track.Kind.Audio) {
+          const el = track.attach()
+          el.id = `voice-${track.sid}`
+          el.style.display = 'none'
+          document.body.appendChild(el)
+        }
+      })
+
+      newRoom.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+        track.detach().forEach((el) => el.remove())
+      })
+
       await newRoom.connect(data.url, data.token)
+      await newRoom.startAudio()
       room = newRoom
       await newRoom.localParticipant.setMicrophoneEnabled(true)
       update({ localMuted: false })
