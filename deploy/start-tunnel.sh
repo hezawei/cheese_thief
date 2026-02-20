@@ -8,8 +8,13 @@ set -euo pipefail
 
 GAME_PORT="${WEB_PORT:-9527}"
 
-# 安装 cloudflared（如果没有）
-if ! command -v cloudflared &>/dev/null; then
+# 检查 cloudflared 是否已存在
+if command -v cloudflared &>/dev/null; then
+  echo "✅ cloudflared 已安装: $(which cloudflared)"
+elif [ -f /usr/local/bin/cloudflared ]; then
+  chmod +x /usr/local/bin/cloudflared
+  echo "✅ cloudflared 已存在: /usr/local/bin/cloudflared"
+else
   echo "📦 安装 cloudflared..."
   curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
   chmod +x /usr/local/bin/cloudflared
