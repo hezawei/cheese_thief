@@ -10,7 +10,7 @@ export default function MobileContainer({ children }: MobileContainerProps) {
       className="
         mx-auto w-full max-w-[430px]
         h-[100dvh] min-h-[100dvh]
-        overflow-hidden
+        overflow-y-auto overflow-x-hidden
         bg-background
         relative
         select-none

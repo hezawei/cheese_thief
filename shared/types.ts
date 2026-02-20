@@ -68,6 +68,7 @@ export interface ClientGameState {
 export interface GameSettings {
   useScapegoat: boolean;
   nightActionSeconds: number;
+  accompliceSelectSeconds: number;
   dayDiscussionSeconds: number;
   votingSeconds: number;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useGameStore } from '@/hooks/useGameStore'
@@ -10,11 +10,23 @@ export default function AccompliceView() {
   const players = useGameStore((s) => s.players)
   const myPlayerId = useGameStore((s) => s.myPlayerId)
   const accomplice = useGameStore((s) => s.accomplice)
+  const settings = useGameStore((s) => s.settings)
   const me = players.find((p) => p.id === myPlayerId)
   const isThief = me?.role === Role.THIEF
 
   const [selected, setSelected] = useState<string[]>([])
   const [submitted, setSubmitted] = useState(false)
+  const [countdown, setCountdown] = useState(settings.accompliceSelectSeconds)
+
+  useEffect(() => {
+    setCountdown(settings.accompliceSelectSeconds)
+  }, [settings.accompliceSelectSeconds])
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const tid = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(tid)
+  }, [countdown > 0])
 
   function toggleSelect(id: string) {
     if (!accomplice) return
@@ -61,6 +73,11 @@ export default function AccompliceView() {
       <div className="flex flex-col items-center justify-center h-full gap-6 px-6">
         <h2 className="text-xl font-bold text-red-400">选择帮凶</h2>
         <p className="text-sm text-muted-foreground">选择 {accomplice.selectCount} 人</p>
+        {accomplice.isThiefSelecting && countdown > 0 && (
+          <p className={`text-xs font-mono ${countdown < 10 ? 'text-red-400' : 'text-muted-foreground'}`}>
+            {countdown}s
+          </p>
+        )}
         <Card className="w-full max-w-[300px]">
           <CardContent className="flex flex-col gap-2 pt-4">
             {accomplice.candidates.map((c) => (
@@ -95,6 +112,11 @@ export default function AccompliceView() {
       <p className="text-muted-foreground text-center text-sm">
         奶酪大盗正在选择帮凶...
       </p>
+      {accomplice?.isThiefSelecting && countdown > 0 && (
+        <p className={`text-xs font-mono ${countdown < 10 ? 'text-red-400/60' : 'text-muted-foreground/50'}`}>
+          {countdown}s
+        </p>
+      )}
     </div>
   )
 }

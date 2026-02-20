@@ -8,7 +8,7 @@ export default function NightView() {
   if (!night) return null
 
   if (!night.isYourTurn) {
-    return <SleepingView currentDice={night.currentDice} />
+    return <SleepingView currentDice={night.currentDice} remainingSeconds={night.remainingSeconds} />
   }
 
   return <NightScene night={night} />

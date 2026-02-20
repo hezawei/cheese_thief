@@ -65,6 +65,7 @@ export class GameRoom {
     this.settings = {
       useScapegoat: false,
       nightActionSeconds: TIMING.nightActionSeconds,
+      accompliceSelectSeconds: TIMING.accompliceSelectSeconds,
       dayDiscussionSeconds: TIMING.dayDiscussionSeconds,
       votingSeconds: TIMING.votingSeconds,
     };
@@ -493,7 +494,7 @@ export class GameRoom {
 
     this.nightTimer = setTimeout(() => {
       this.autoSelectAccomplice();
-    }, this.settings.nightActionSeconds * 1000);
+    }, this.settings.accompliceSelectSeconds * 1000);
   }
 
   handleAccompliceSelect(playerId: string, targetIds: string[]): void {
@@ -632,11 +633,9 @@ export class GameRoom {
   private forceEndVoting(): void {
     const nonVoters = this.players.filter((p) => !p.hasVoted);
     for (const p of nonVoters) {
-      const candidates = this.players.filter((t) => t.id !== p.id);
-      const target = candidates[Math.floor(Math.random() * candidates.length)];
       p.hasVoted = true;
-      p.votedFor = target.id;
     }
+    log('vote', `Timeout: ${nonVoters.length} player(s) abstained`);
     this.endVoting();
   }
 
@@ -669,16 +668,18 @@ export class GameRoom {
     let winnerTeam: typeof Team[keyof typeof Team] = Team.EVIL;
     let winnerLabel = '奶酪大盗胜利';
 
-    for (const p of topVoted) {
-      if (p.role === Role.SCAPEGOAT) {
-        winnerTeam = Team.NEUTRAL;
-        winnerLabel = '背锅鼠胜利';
-        break;
-      }
-      if (p.role === Role.THIEF) {
-        winnerTeam = Team.GOOD;
-        winnerLabel = '贪睡鼠胜利';
-        break;
+    if (maxVotes > 0) {
+      for (const p of topVoted) {
+        if (p.role === Role.SCAPEGOAT) {
+          winnerTeam = Team.NEUTRAL;
+          winnerLabel = '背锅鼠胜利';
+          break;
+        }
+        if (p.role === Role.THIEF) {
+          winnerTeam = Team.GOOD;
+          winnerLabel = '贪睡鼠胜利';
+          break;
+        }
       }
     }
 
