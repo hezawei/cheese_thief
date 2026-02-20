@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { getSocket, connectSocket } from '@/lib/socket'
 import { useGameStore } from './useGameStore'
-import { S2C } from '@shared/events'
+import { C2S, S2C } from '@shared/events'
 import type { ClientGameState } from '@shared/types'
 
 export function useSocket() {
@@ -13,6 +13,14 @@ export function useSocket() {
   useEffect(() => {
     const socket = getSocket()
     connectSocket()
+
+    socket.on('connect', () => {
+      const { sessionToken, roomCode } = useGameStore.getState()
+      if (sessionToken && roomCode) {
+        console.log('[socket] reconnecting to room', roomCode)
+        socket.emit(C2S.RECONNECT, { sessionToken, roomCode })
+      }
+    })
 
     socket.on(S2C.ROOM_STATE, (data: { roomCode: string; playerId: string; sessionToken: string }) => {
       setRoomCode(data.roomCode)
@@ -30,6 +38,7 @@ export function useSocket() {
     })
 
     return () => {
+      socket.off('connect')
       socket.off(S2C.ROOM_STATE)
       socket.off(S2C.GAME_STATE)
       socket.off(S2C.ERROR)

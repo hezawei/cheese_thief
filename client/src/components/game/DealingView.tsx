@@ -64,7 +64,7 @@ export default function DealingView() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-5 px-6">
+    <div className="flex flex-col items-center justify-center min-h-full gap-5 px-6 py-8">
       <motion.h2
         className="text-xl font-bold text-cheese-400"
         initial={{ opacity: 0, y: -10 }}

@@ -41,7 +41,7 @@ export default function VoteView() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-6 px-6">
+    <div className="flex flex-col items-center justify-center min-h-full gap-6 px-6 py-8">
       <h2 className="text-xl font-bold text-cheese-400">投票</h2>
       <p className="text-xs text-muted-foreground text-center max-w-[280px]">
         投出你认为是奶酪大盗的人！得票最多的玩家将被淘汰。
