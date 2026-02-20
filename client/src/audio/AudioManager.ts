@@ -1,35 +1,30 @@
 import { Howl, Howler } from 'howler'
 import { GamePhase } from '@shared/types'
 
-/* ── Audio file paths (relative to /public) ── */
-/* Howler tries each src in order; put both formats so either works */
-const EXTS = ['.mp3', '.flac', '.ogg', '.wav'] as const
+/* ── Audio config ── */
+const EXTS = ['.mp3', '.flac', '.ogg', '.wav']
 
-function audioSrc(name: string): string[] {
-  return EXTS.map((ext) => `/audio/${name}${ext}`)
-}
-
-const BGM = {
-  lobby:  audioSrc('bgm-lobby'),
-  night:  audioSrc('bgm-night'),
-  day:    audioSrc('bgm-day'),
-  vote:   audioSrc('bgm-vote'),
-  result: audioSrc('bgm-result'),
+const BGM_NAMES = {
+  lobby:  'bgm-lobby',
+  night:  'bgm-night',
+  day:    'bgm-day',
+  vote:   'bgm-vote',
+  result: 'bgm-result',
 } as const
 
-const SFX = {
-  phaseTransition: audioSrc('sfx-transition'),
-  steal:           audioSrc('sfx-steal'),
-  diceReveal:      audioSrc('sfx-dice-reveal'),
-  voteConfirm:     audioSrc('sfx-vote'),
-  tick:            audioSrc('sfx-tick'),
-  victory:         audioSrc('sfx-victory'),
-  click:           audioSrc('sfx-click'),
-  warning:         audioSrc('sfx-warning'),
+const SFX_NAMES = {
+  phaseTransition: 'sfx-transition',
+  steal:           'sfx-steal',
+  diceReveal:      'sfx-dice-reveal',
+  voteConfirm:     'sfx-vote',
+  tick:            'sfx-tick',
+  victory:         'sfx-victory',
+  click:           'sfx-click',
+  warning:         'sfx-warning',
 } as const
 
-type BgmKey = keyof typeof BGM
-type SfxKey = keyof typeof SFX
+type BgmKey = keyof typeof BGM_NAMES
+type SfxKey = keyof typeof SFX_NAMES
 
 const PHASE_BGM: Partial<Record<GamePhase, BgmKey>> = {
   [GamePhase.LOBBY]:      'lobby',
@@ -53,6 +48,7 @@ class AudioManager {
   private _bgmVolume = DEFAULT_BGM_VOLUME
   private _sfxVolume = DEFAULT_SFX_VOLUME
   private _unlocked = false
+  private _pendingPhase: GamePhase | null = null
 
   constructor() {
     this._muted = localStorage.getItem('audioMuted') === 'true'
@@ -66,46 +62,72 @@ class AudioManager {
     }
   }
 
+  /**
+   * Try loading an audio file with format fallback.
+   * Tries .mp3 → .flac → .ogg → .wav; uses the first that loads.
+   */
+  private loadWithFallback(
+    fileName: string,
+    opts: { loop: boolean; volume: number },
+    onSuccess: (howl: Howl) => void,
+  ): void {
+    let idx = 0
+    const tryNext = (): void => {
+      if (idx >= EXTS.length) return // no format found, skip silently
+      const url = `/audio/${fileName}${EXTS[idx]}`
+      idx++
+      const howl = new Howl({
+        src: [url],
+        loop: opts.loop,
+        volume: opts.volume,
+        preload: true,
+        onload: () => onSuccess(howl),
+        onloaderror: () => {
+          howl.unload()
+          tryNext()
+        },
+      })
+    }
+    tryNext()
+  }
+
   /** Preload all audio. Call once after first user interaction. */
   preload(): void {
     if (this._unlocked) return
     this._unlocked = true
 
-    for (const [key, src] of Object.entries(BGM)) {
-      try {
-        const howl = new Howl({
-          src,
-          loop: true,
-          volume: this._bgmVolume,
-          preload: true,
-          html5: true,
-          onloaderror: () => {
-            console.warn(`[audio] BGM "${key}" not found: ${src}`)
-            this.bgmHowls.delete(key as BgmKey)
-          },
-        })
-        this.bgmHowls.set(key as BgmKey, howl)
-      } catch { /* skip */ }
+    for (const [key, fileName] of Object.entries(BGM_NAMES)) {
+      this.loadWithFallback(
+        fileName,
+        { loop: true, volume: this._bgmVolume },
+        (howl) => {
+          this.bgmHowls.set(key as BgmKey, howl)
+          // Auto-play if this BGM was pending
+          if (this._pendingPhase !== null) {
+            const wanted = PHASE_BGM[this._pendingPhase] ?? null
+            if (wanted === key && this.currentBgm !== wanted) {
+              this.crossfadeTo(wanted as BgmKey)
+            }
+          }
+        },
+      )
     }
 
-    for (const [key, src] of Object.entries(SFX)) {
-      try {
-        const howl = new Howl({
-          src,
-          volume: this._sfxVolume,
-          preload: true,
-          onloaderror: () => {
-            console.warn(`[audio] SFX "${key}" not found: ${src}`)
-            this.sfxHowls.delete(key as SfxKey)
-          },
-        })
-        this.sfxHowls.set(key as SfxKey, howl)
-      } catch { /* skip */ }
+    for (const [key, fileName] of Object.entries(SFX_NAMES)) {
+      this.loadWithFallback(
+        fileName,
+        { loop: false, volume: this._sfxVolume },
+        (howl) => {
+          this.sfxHowls.set(key as SfxKey, howl)
+        },
+      )
     }
   }
 
   /** Switch BGM based on game phase */
   setPhase(phase: GamePhase): void {
+    this._pendingPhase = phase
+    if (!this._unlocked) return
     const target = PHASE_BGM[phase] ?? null
     if (target === this.currentBgm) return
     this.crossfadeTo(target)

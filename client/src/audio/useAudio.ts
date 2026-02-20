@@ -27,24 +27,22 @@ export function useAudio() {
   const phase = useGameStore((s) => s.phase)
   const muted = useSyncExternalStore(subscribe, getSnapshot)
 
-  // Preload on first user interaction (click/touch)
+  // Preload on first user interaction (click/touch) — only once
   useEffect(() => {
     function unlock() {
       audioManager.preload()
-      // Start playing BGM for current phase after unlock
-      audioManager.setPhase(phase)
       document.removeEventListener('click', unlock)
       document.removeEventListener('touchstart', unlock)
     }
-    document.addEventListener('click', unlock, { once: false })
-    document.addEventListener('touchstart', unlock, { once: false })
+    document.addEventListener('click', unlock)
+    document.addEventListener('touchstart', unlock)
     return () => {
       document.removeEventListener('click', unlock)
       document.removeEventListener('touchstart', unlock)
     }
-  }, [phase])
+  }, [])
 
-  // Switch BGM when phase changes
+  // Switch BGM when phase changes (AudioManager queues if not yet loaded)
   useEffect(() => {
     audioManager.setPhase(phase)
   }, [phase])
