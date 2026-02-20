@@ -1,0 +1,16 @@
+export const MIN_PLAYERS = 4;
+export const MAX_PLAYERS = 8;
+
+export const DICE_MIN = 1;
+export const DICE_MAX = 6;
+
+export const DEFAULT_NIGHT_ACTION_SECONDS = 8;
+export const NIGHT_TURN_TIMEOUT_SECONDS = 30;
+export const NIGHT_EMPTY_PAUSE_MS = 2000;
+export const DEFAULT_DAY_DISCUSSION_SECONDS = 15;
+export const DEFAULT_VOTING_SECONDS = 15;
+export const DEFAULT_DEALING_DELAY_SECONDS = 3;
+export const RECONNECT_TIMEOUT_SECONDS = 60;
+
+export const ROOM_CODE_LENGTH = 4;
+export const ROOM_CODE_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

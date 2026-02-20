@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "livekit-server-sdk": "^2.15.0"
+  }
+}
