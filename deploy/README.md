@@ -4,7 +4,7 @@
 
 - Linux 服务器（推荐 Ubuntu 22.04+）
 - [Docker](https://docs.docker.com/engine/install/) + [Docker Compose](https://docs.docker.com/compose/install/)
-- 开放端口：80（HTTP）
+- 开放端口：9527（默认，可自定义）
 
 ## 快速部署
 
@@ -56,7 +56,7 @@ docker compose up -d
 用手机浏览器打开：
 
 ```
-http://<你的服务器IP>
+http://<你的服务器IP>:9527
 ```
 
 如果改了端口：`http://<你的服务器IP>:<WEB_PORT>`
@@ -84,17 +84,25 @@ docker compose ps
 
 ## 更换端口
 
-在 `deploy/` 目录下运行：
+默认端口 `9527`，可自定义：
 
 ```bash
-WEB_PORT=8080 docker compose up -d
+WEB_PORT=8888 docker compose up -d
 ```
 
-或在 `.env.production` 同级创建 `.env` 文件写入：
+或在 `deploy/` 目录创建 `.env` 文件写入：
 
 ```
-WEB_PORT=8080
+WEB_PORT=8888
 ```
+
+## 与其他项目共存
+
+本项目完全隔离运行：
+- **项目名称**：`cheese-thief`（所有容器和网络都有此前缀）
+- **独立网络**：`cheese-net`，不影响其他 Docker 项目
+- **容器名称**：`cheese-thief-server`、`cheese-thief-web`
+- **端口**：默认 9527，不占用常用端口
 
 ## HTTPS（可选）
 
@@ -126,7 +134,7 @@ Caddy 自动获取 SSL 证书。
              │
              ▼
 ┌─────────── nginx (web) ─────────────────┐
-│  :80                                     │
+│  :9527 → :80                             │
 │  /             → 静态文件 (React SPA)    │
 │  /socket.io/  → proxy → server:3001     │
 └────────────┬────────────────────────────┘
