@@ -43,6 +43,13 @@ COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 
+# ── Target: web-caddy (Caddy with auto HTTPS) ────────────
+FROM caddy:alpine AS web-caddy
+COPY --from=build-client /app/client/dist /srv/www
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80 443
+
+
 # ── Target: server (Node.js game server) ─────────────────
 FROM node:20-alpine AS server
 WORKDIR /app

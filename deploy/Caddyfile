@@ -1,0 +1,24 @@
+{$DOMAIN:localhost} {
+    # Serve client static files
+    root * /srv/www
+    file_server
+
+    # SPA fallback
+    try_files {path} /index.html
+
+    # WebSocket + Socket.IO proxy
+    handle /socket.io/* {
+        reverse_proxy server:3001
+    }
+
+    # Health check
+    handle /health {
+        reverse_proxy server:3001
+    }
+
+    # Static asset cache
+    @static path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
+    header @static Cache-Control "public, max-age=2592000, immutable"
+
+    encode gzip
+}
