@@ -17,7 +17,7 @@
     }
 
     # Static asset cache
-    @static path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2
+    @static path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.mp3 *.flac *.ogg *.wav
     header @static Cache-Control "public, max-age=2592000, immutable"
 
     encode gzip

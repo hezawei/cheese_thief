@@ -150,12 +150,14 @@ class AudioManager {
       setTimeout(() => oldHowl.stop(), FADE_MS)
     }
 
-    this.currentBgm = target
-
     if (newHowl) {
+      this.currentBgm = target
       newHowl.volume(0)
       newHowl.play()
       newHowl.fade(0, this._bgmVolume, FADE_MS)
+    } else {
+      // Howl not loaded yet — don't set currentBgm so onSuccess can auto-play later
+      if (oldHowl) this.currentBgm = null
     }
   }
 
