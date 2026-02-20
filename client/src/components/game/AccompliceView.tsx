@@ -5,6 +5,7 @@ import { useGameStore } from '@/hooks/useGameStore'
 import { getSocket } from '@/lib/socket'
 import { C2S } from '@shared/events'
 import { Role } from '@shared/types'
+import { audioManager } from '@/audio/AudioManager'
 
 export default function AccompliceView() {
   const players = useGameStore((s) => s.players)
@@ -30,6 +31,7 @@ export default function AccompliceView() {
 
   function toggleSelect(id: string) {
     if (!accomplice) return
+    audioManager.playSfx('click')
     if (selected.includes(id)) {
       setSelected(selected.filter((x) => x !== id))
     } else if (selected.length < accomplice.selectCount) {
@@ -40,12 +42,14 @@ export default function AccompliceView() {
   function handleSubmit() {
     if (!accomplice || selected.length !== accomplice.selectCount) return
     setSubmitted(true)
+    audioManager.playSfx('voteConfirm')
     getSocket().emit(C2S.ACCOMPLICE_SELECT, { targetIds: selected })
   }
 
   // Accomplice reveal screen
   if (accomplice?.youAreAccomplice) {
     return (
+      <div className="h-full overflow-y-auto">
       <div className="flex flex-col items-center justify-center min-h-full gap-6 px-6 py-8">
         <h2 className="text-xl font-bold text-red-400">你是帮凶！</h2>
         <Card className="w-full max-w-[300px]">
@@ -64,12 +68,14 @@ export default function AccompliceView() {
           </CardContent>
         </Card>
       </div>
+      </div>
     )
   }
 
   // Thief selection screen
   if (isThief && accomplice?.isThiefSelecting && accomplice.candidates.length > 0) {
     return (
+      <div className="h-full overflow-y-auto">
       <div className="flex flex-col items-center justify-center min-h-full gap-6 px-6 py-8">
         <h2 className="text-xl font-bold text-red-400">选择帮凶</h2>
         <p className="text-sm text-muted-foreground">选择 {accomplice.selectCount} 人</p>
@@ -102,11 +108,13 @@ export default function AccompliceView() {
           {submitted ? '等待中...' : '确认'}
         </Button>
       </div>
+      </div>
     )
   }
 
   // Waiting screen (non-thief or thief after submitting)
   return (
+    <div className="h-full overflow-y-auto">
     <div className="flex flex-col items-center justify-center min-h-full gap-6 px-6 py-8">
       <h2 className="text-xl font-bold text-cheese-400">秘密会议</h2>
       <p className="text-muted-foreground text-center text-sm">
@@ -117,6 +125,7 @@ export default function AccompliceView() {
           {countdown}s
         </p>
       )}
+    </div>
     </div>
   )
 }

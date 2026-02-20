@@ -64,6 +64,7 @@ export default function DealingView() {
   }
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="flex flex-col items-center justify-center min-h-full gap-5 px-6 py-8">
       <motion.h2
         className="text-xl font-bold text-cheese-400"
@@ -161,6 +162,7 @@ export default function DealingView() {
           {ready ? '等待中...' : '我记住了'}
         </Button>
       </motion.div>
+    </div>
     </div>
   )
 }

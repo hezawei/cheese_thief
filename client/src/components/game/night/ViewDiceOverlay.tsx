@@ -4,6 +4,7 @@ import { getSocket } from '@/lib/socket'
 import { C2S } from '@shared/events'
 import DiceFace from '@/assets/characters/DiceFace'
 import DiceCup from '@/assets/characters/DiceCup'
+import { audioManager } from '@/audio/AudioManager'
 import type { ViewedDiceInfo, NightSeat } from '@shared/types'
 
 interface ViewDicePanelProps {
@@ -26,6 +27,7 @@ export function ViewDicePanel({
   function handleViewDice(targetId: string) {
     if (acted) return
     onActed()
+    audioManager.playSfx('diceReveal')
     getSocket().emit(C2S.NIGHT_ACTION, { action: 'VIEW_DICE', targetId })
   }
 

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useGameStore } from '@/hooks/useGameStore'
 import { getSocket } from '@/lib/socket'
 import { C2S, S2C } from '@shared/events'
+import { audioManager } from '@/audio/AudioManager'
 
 export default function VoteView() {
   const players = useGameStore((s) => s.players)
@@ -29,7 +30,12 @@ export default function VoteView() {
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setRemaining((r) => Math.max(0, r - 1))
+      setRemaining((r) => {
+        const next = Math.max(0, r - 1)
+        if (next > 0 && next <= 5) audioManager.playSfx('tick')
+        if (next === 3) audioManager.playSfx('warning')
+        return next
+      })
     }, 1000)
     return () => clearInterval(timer)
   }, [])
@@ -37,10 +43,12 @@ export default function VoteView() {
   function handleVote() {
     if (!selectedId || voted) return
     setVoted(true)
+    audioManager.playSfx('voteConfirm')
     getSocket().emit(C2S.CAST_VOTE, { targetId: selectedId })
   }
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="flex flex-col items-center justify-center min-h-full gap-6 px-6 py-8">
       <h2 className="text-xl font-bold text-cheese-400">投票</h2>
       <p className="text-xs text-muted-foreground text-center max-w-[280px]">
@@ -74,6 +82,7 @@ export default function VoteView() {
       >
         {voted ? '等待其他人投票...' : '确认投票'}
       </Button>
+    </div>
     </div>
   )
 }

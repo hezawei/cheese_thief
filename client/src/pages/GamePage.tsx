@@ -1,9 +1,10 @@
 import type React from 'react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { useGameStore } from '@/hooks/useGameStore'
 import { useSocket } from '@/hooks/useSocket'
 import { GamePhase } from '@shared/types'
+import { audioManager } from '@/audio/AudioManager'
 import DealingView from '@/components/game/DealingView'
 import NightView from '@/components/game/NightView'
 import AccompliceView from '@/components/game/AccompliceView'
@@ -19,12 +20,24 @@ export default function GamePage() {
 
   const phase = useGameStore((s) => s.phase)
   const storeRoomCode = useGameStore((s) => s.roomCode)
+  const prevPhase = useRef(phase)
 
   useEffect(() => {
     if (phase === GamePhase.LOBBY && roomCode) {
       navigate(`/lobby/${roomCode}`)
     }
   }, [phase, roomCode, navigate])
+
+  useEffect(() => {
+    if (prevPhase.current !== phase) {
+      if (phase === GamePhase.RESULT) {
+        audioManager.playSfx('victory')
+      } else {
+        audioManager.playSfx('phaseTransition')
+      }
+      prevPhase.current = phase
+    }
+  }, [phase])
 
   if (!storeRoomCode) {
     return (

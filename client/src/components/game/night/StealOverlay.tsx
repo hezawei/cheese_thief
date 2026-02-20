@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { getSocket } from '@/lib/socket'
 import { C2S } from '@shared/events'
 import Cheese from '@/assets/characters/Cheese'
+import { audioManager } from '@/audio/AudioManager'
 
 interface ThiefProps {
   canSteal: boolean
@@ -17,6 +18,7 @@ export function ThiefStealPanel({ canSteal, hasStolen, awakeCount }: ThiefProps)
   function handleSteal() {
     if (!canSteal || stealing) return
     setStealing(true)
+    audioManager.playSfx('steal')
     getSocket().emit(C2S.NIGHT_STEAL)
   }
 

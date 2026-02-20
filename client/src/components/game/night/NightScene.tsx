@@ -118,10 +118,10 @@ export default function NightScene({ night }: Props) {
   const showReady = !needsAction && !ready
 
   return (
-    <div className="relative flex flex-col items-center h-full overflow-hidden">
+    <div className="relative flex flex-col items-center h-full overflow-y-auto">
       <StarField />
 
-      <div className="relative z-10 flex flex-col items-center w-full h-full">
+      <div className="relative z-10 flex flex-col items-center w-full">
         {/* ── Header bar ── */}
         <div className="flex items-center gap-3 pt-3 pb-1">
           <motion.h2
