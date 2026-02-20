@@ -8,6 +8,9 @@ import {
   disconnectVoice,
   toggleVoiceMute,
   forceLocalMute,
+  detachAllRemoteAudio,
+  reattachAllRemoteAudio,
+  restoreUserMicState,
 } from '@/lib/voice'
 
 /** Phases where ALL players may optionally speak */
@@ -41,21 +44,26 @@ export function useVoice() {
     canSpeak = false
   }
 
-  // Force mute when canSpeak transitions to false
+  // When canSpeak changes, control both mic and remote audio
   useEffect(() => {
     if (!voiceState.connected) return
     if (!canSpeak) {
       forceLocalMute()
+      detachAllRemoteAudio()
+    } else {
+      reattachAllRemoteAudio()
+      restoreUserMicState()
     }
   }, [canSpeak, voiceState.connected])
 
   // Single button: first press connects, subsequent presses toggle mute
   const onMicPress = useCallback(async () => {
+    if (!canSpeak) return
     if (!voiceState.connected && !voiceState.connecting) {
-      connectVoice()
+      connectVoice(true)
       return
     }
-    if (voiceState.connected && canSpeak) {
+    if (voiceState.connected) {
       await toggleVoiceMute()
     }
   }, [voiceState.connected, voiceState.connecting, canSpeak])

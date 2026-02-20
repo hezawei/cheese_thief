@@ -36,6 +36,7 @@ export async function muteAllParticipants(roomCode: string): Promise<void> {
       participants.map((p) =>
         client.updateParticipant(room, p.identity, undefined, {
           canPublish: false,
+          canSubscribe: false,
         }),
       ),
     );
@@ -58,6 +59,7 @@ export async function unmuteAllParticipants(roomCode: string): Promise<void> {
       participants.map((p) =>
         client.updateParticipant(room, p.identity, undefined, {
           canPublish: true,
+          canSubscribe: true,
         }),
       ),
     );
@@ -78,11 +80,13 @@ export async function unmuteSpecificParticipants(roomCode: string, allowedIdenti
     const participants = await client.listParticipants(room);
     if (participants.length === 0) return;
     await Promise.allSettled(
-      participants.map((p) =>
-        client.updateParticipant(room, p.identity, undefined, {
-          canPublish: allowed.has(p.identity),
-        }),
-      ),
+      participants.map((p) => {
+        const isAllowed = allowed.has(p.identity);
+        return client.updateParticipant(room, p.identity, undefined, {
+          canPublish: isAllowed,
+          canSubscribe: isAllowed,
+        });
+      }),
     );
     log('voice', `Selective unmute in ${roomCode}: ${allowedIdentities.length} allowed`);
   } catch (err) {

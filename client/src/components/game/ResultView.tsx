@@ -209,11 +209,11 @@ export default function ResultView() {
       >
         {isHost ? (
           <Button onClick={handleBackToLobby} className="w-full" size="lg">
-            返回大厅
+            返回房间
           </Button>
         ) : (
           <p className="text-center text-sm text-muted-foreground">
-            等待房主返回大厅...
+            等待房主返回房间...
           </p>
         )}
       </motion.div>

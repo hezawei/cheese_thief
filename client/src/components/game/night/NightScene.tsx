@@ -10,7 +10,7 @@ import DiceCup from '@/assets/characters/DiceCup'
 import CountdownRing from '@/components/animations/CountdownRing'
 import RoundTable from './RoundTable'
 import MouseSeat from './MouseSeat'
-import { ThiefStealPanel, WitnessStealPanel, CheeseStealAnim } from './StealOverlay'
+import { ThiefStealPanel, CheeseStealAnim } from './StealOverlay'
 import { ViewDicePanel, DiceCupOpenAnim } from './ViewDiceOverlay'
 import type { ClientNightState } from '@shared/types'
 
@@ -54,7 +54,6 @@ export default function NightScene({ night }: Props) {
     canViewDice,
     viewedDice,
     cheeseStealVisible,
-    stealerName,
     stealerId,
     awakePlayerIds,
     remainingSeconds,
@@ -258,15 +257,8 @@ export default function NightScene({ night }: Props) {
               </motion.div>
             )}
 
-            {/* Witness: sees steal */}
-            {!isThief && cheeseStealVisible && (
-              <motion.div key="witness" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <WitnessStealPanel stealerName={stealerName} />
-              </motion.div>
-            )}
-
             {/* Solo viewer: view dice */}
-            {!isThief && !cheeseStealVisible && (canViewDice || viewedDice) && (
+            {!isThief && (canViewDice || viewedDice) && (
               <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ViewDicePanel
                   canViewDice={canViewDice}

@@ -23,6 +23,27 @@ const INITIAL_STATE: VoiceSnapshot = {
 let room: Room | null = null
 let state: VoiceSnapshot = { ...INITIAL_STATE }
 const listeners = new Set<VoiceListener>()
+let userWantsMic = false
+
+function attachRemoteAudio(track: RemoteTrack): void {
+  if (track.kind !== Track.Kind.Audio) return
+  const existing = document.getElementById(`voice-${track.sid}`)
+  if (existing) return
+  const el = track.attach()
+  el.id = `voice-${track.sid}`
+  el.style.display = 'none'
+  document.body.appendChild(el)
+}
+
+function attachAllRemoteAudio(r: Room): void {
+  for (const p of r.remoteParticipants.values()) {
+    for (const pub of p.trackPublications.values()) {
+      if (pub.track && pub.track.kind === Track.Kind.Audio) {
+        attachRemoteAudio(pub.track as RemoteTrack)
+      }
+    }
+  }
+}
 
 function notify(): void {
   for (const fn of listeners) fn(state)
@@ -42,7 +63,7 @@ export function subscribeVoice(fn: VoiceListener): () => void {
   return () => listeners.delete(fn)
 }
 
-export function connectVoice(): void {
+export function connectVoice(enableMic = true): void {
   if (room || state.connecting) return
 
   const socket = getSocket()
@@ -76,12 +97,7 @@ export function connectVoice(): void {
       })
 
       newRoom.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub: RemoteTrackPublication) => {
-        if (track.kind === Track.Kind.Audio) {
-          const el = track.attach()
-          el.id = `voice-${track.sid}`
-          el.style.display = 'none'
-          document.body.appendChild(el)
-        }
+        attachRemoteAudio(track)
       })
 
       newRoom.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
@@ -89,10 +105,20 @@ export function connectVoice(): void {
       })
 
       await newRoom.connect(data.url, data.token)
-      await newRoom.startAudio()
       room = newRoom
-      await newRoom.localParticipant.setMicrophoneEnabled(true)
-      update({ localMuted: false })
+      await newRoom.startAudio()
+      attachAllRemoteAudio(newRoom)
+      if (enableMic) {
+        try {
+          await newRoom.localParticipant.setMicrophoneEnabled(true)
+          userWantsMic = true
+          update({ localMuted: false })
+        } catch {
+          update({ localMuted: true })
+        }
+      } else {
+        update({ localMuted: true })
+      }
     } catch (err) {
       update({ connecting: false, error: err instanceof Error ? err.message : String(err) })
     }
@@ -107,22 +133,52 @@ export function disconnectVoice(): void {
     room.disconnect()
     room = null
   }
+  userWantsMic = false
   state = { ...INITIAL_STATE }
   notify()
 }
 
 export async function toggleVoiceMute(): Promise<void> {
   if (!room) return
+  await room.startAudio()
   const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone)
-  if (!pub?.track) return
+
+  if (!pub?.track) {
+    try {
+      await room.localParticipant.setMicrophoneEnabled(true)
+      userWantsMic = true
+      update({ localMuted: false })
+    } catch {
+      update({ localMuted: true })
+    }
+    return
+  }
 
   if (pub.isMuted) {
     await pub.unmute()
+    userWantsMic = true
     update({ localMuted: false })
   } else {
     await pub.mute()
+    userWantsMic = false
     update({ localMuted: true })
   }
+}
+
+export function detachAllRemoteAudio(): void {
+  if (!room) return
+  for (const p of room.remoteParticipants.values()) {
+    for (const pub of p.trackPublications.values()) {
+      if (pub.track && pub.track.kind === Track.Kind.Audio) {
+        pub.track.detach().forEach((el) => el.remove())
+      }
+    }
+  }
+}
+
+export function reattachAllRemoteAudio(): void {
+  if (!room) return
+  attachAllRemoteAudio(room)
 }
 
 export async function forceLocalMute(): Promise<void> {
@@ -130,6 +186,23 @@ export async function forceLocalMute(): Promise<void> {
   const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone)
   if (pub?.track && !pub.isMuted) {
     await pub.mute()
+    update({ localMuted: true })
+  }
+  // NOTE: does NOT change userWantsMic — system mute preserves user intent
+}
+
+export async function restoreUserMicState(): Promise<void> {
+  if (!room || !userWantsMic) return
+  await room.startAudio()
+  const pub = room.localParticipant.getTrackPublication(Track.Source.Microphone)
+  try {
+    if (!pub?.track) {
+      await room.localParticipant.setMicrophoneEnabled(true)
+    } else if (pub.isMuted) {
+      await pub.unmute()
+    }
+    update({ localMuted: false })
+  } catch {
     update({ localMuted: true })
   }
 }
