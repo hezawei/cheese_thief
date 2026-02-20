@@ -3,10 +3,21 @@ import { RoomManager } from '../game/RoomManager';
 import { buildClientState } from '../game/ViewBuilder';
 import { C2S, S2C } from '../../../shared/events';
 import { RECONNECT_TIMEOUT_SECONDS } from '../../../shared/constants';
-import { log, warn } from '../utils/logger';
+import { log, warn, error as logError } from '../utils/logger';
+
+function safeOn(socket: Socket, event: string, handler: (...args: any[]) => void): void {
+  socket.on(event, (...args: any[]) => {
+    try {
+      handler(...args);
+    } catch (err) {
+      logError('handler', `Error in ${event} from ${socket.id}:`, err);
+      socket.emit(S2C.ERROR, { message: '服务器内部错误，请重试' });
+    }
+  });
+}
 
 export function registerRoomHandlers(socket: Socket, io: Server, roomManager: RoomManager): void {
-  socket.on(C2S.CREATE_ROOM, (data: { name: string; avatarIndex: number }) => {
+  safeOn(socket, C2S.CREATE_ROOM, (data: { name: string; avatarIndex: number }) => {
     const room = roomManager.createRoom();
     const player = room.addPlayer(socket, data.name, data.avatarIndex);
     if (!player) {
@@ -26,7 +37,7 @@ export function registerRoomHandlers(socket: Socket, io: Server, roomManager: Ro
     room.broadcastRoomUpdate();
   });
 
-  socket.on(C2S.JOIN_ROOM, (data: { roomCode: string; name: string; avatarIndex: number }) => {
+  safeOn(socket, C2S.JOIN_ROOM, (data: { roomCode: string; name: string; avatarIndex: number }) => {
     const code = data.roomCode.toUpperCase();
     const room = roomManager.getRoom(code);
 
@@ -53,11 +64,11 @@ export function registerRoomHandlers(socket: Socket, io: Server, roomManager: Ro
     room.broadcastRoomUpdate();
   });
 
-  socket.on(C2S.LEAVE_ROOM, () => {
+  safeOn(socket, C2S.LEAVE_ROOM, () => {
     handleLeave(socket, roomManager);
   });
 
-  socket.on(C2S.UPDATE_SETTINGS, (data: Record<string, unknown>) => {
+  safeOn(socket, C2S.UPDATE_SETTINGS, (data: Record<string, unknown>) => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
 
@@ -68,7 +79,7 @@ export function registerRoomHandlers(socket: Socket, io: Server, roomManager: Ro
     room.broadcastRoomUpdate();
   });
 
-  socket.on(C2S.RECONNECT, (data: { sessionToken: string; roomCode: string }) => {
+  safeOn(socket, C2S.RECONNECT, (data: { sessionToken: string; roomCode: string }) => {
     const room = roomManager.getRoom(data.roomCode.toUpperCase());
     if (!room) {
       socket.emit(S2C.ERROR, { message: '房间不存在' });
@@ -100,26 +111,34 @@ export function registerRoomHandlers(socket: Socket, io: Server, roomManager: Ro
   });
 
   socket.on('disconnect', () => {
-    const roomCode = socket.data.roomCode as string | undefined;
-    if (!roomCode) return;
+    try {
+      const roomCode = socket.data.roomCode as string | undefined;
+      if (!roomCode) return;
 
-    const room = roomManager.getRoom(roomCode);
-    if (!room) return;
+      const room = roomManager.getRoom(roomCode);
+      if (!room) return;
 
-    const player = room.findPlayerById(socket.id);
-    if (!player) return;
+      const player = room.findPlayerById(socket.id);
+      if (!player) return;
 
-    player.isConnected = false;
-    log('disconnect', `${player.name} disconnected from ${roomCode}`);
+      player.isConnected = false;
+      log('disconnect', `${player.name} disconnected from ${roomCode}`);
 
-    io.to(roomCode).emit(S2C.PLAYER_DISCONNECTED, { playerId: player.id, name: player.name });
+      io.to(roomCode).emit(S2C.PLAYER_DISCONNECTED, { playerId: player.id, name: player.name });
 
-    player.disconnectTimer = setTimeout(() => {
-      room.removePlayer(player.id);
-      roomManager.cleanupIfEmpty(roomCode);
-      room.broadcastRoomUpdate();
-      warn('timeout', `${player.name} removed from ${roomCode} (timeout)`);
-    }, RECONNECT_TIMEOUT_SECONDS * 1000);
+      player.disconnectTimer = setTimeout(() => {
+        try {
+          room.removePlayer(player.id);
+          roomManager.cleanupIfEmpty(roomCode);
+          room.broadcastRoomUpdate();
+          warn('timeout', `${player.name} removed from ${roomCode} (timeout)`);
+        } catch (err) {
+          logError('timeout', `Error removing player ${player.name}:`, err);
+        }
+      }, RECONNECT_TIMEOUT_SECONDS * 1000);
+    } catch (err) {
+      logError('disconnect', `Error in disconnect handler for ${socket.id}:`, err);
+    }
   });
 }
 

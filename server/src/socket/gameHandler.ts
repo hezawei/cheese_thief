@@ -3,10 +3,21 @@ import { RoomManager } from '../game/RoomManager';
 import { C2S, S2C } from '../../../shared/events';
 import { GamePhase } from '../../../shared/types';
 import { MIN_PLAYERS, MAX_PLAYERS } from '../../../shared/constants';
-import { log } from '../utils/logger';
+import { log, error as logError } from '../utils/logger';
+
+function safeOn(socket: Socket, event: string, handler: (...args: any[]) => void): void {
+  socket.on(event, (...args: any[]) => {
+    try {
+      handler(...args);
+    } catch (err) {
+      logError('handler', `Error in ${event} from ${socket.id}:`, err);
+      socket.emit(S2C.ERROR, { message: '服务器内部错误，请重试' });
+    }
+  });
+}
 
 export function registerGameHandlers(socket: Socket, io: Server, roomManager: RoomManager): void {
-  socket.on(C2S.START_GAME, () => {
+  safeOn(socket, C2S.START_GAME, () => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
 
@@ -30,7 +41,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.startGame();
   });
 
-  socket.on(C2S.DEALING_READY, (data?: { chosenWakeDice?: number }) => {
+  safeOn(socket, C2S.DEALING_READY, (data?: { chosenWakeDice?: number }) => {
     log('game', `DEALING_READY from ${socket.id}, data=${JSON.stringify(data)}`);
     const room = getRoomForSocket(socket, roomManager);
     if (!room) {
@@ -45,7 +56,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.markDealingReady(socket.id, data?.chosenWakeDice ?? null);
   });
 
-  socket.on(C2S.NIGHT_ACTION, (data: { action: string; targetId?: string }) => {
+  safeOn(socket, C2S.NIGHT_ACTION, (data: { action: string; targetId?: string }) => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
     if (room.phase !== GamePhase.NIGHT) return;
@@ -53,7 +64,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.handleNightAction(socket.id, data.action, data.targetId ?? null);
   });
 
-  socket.on(C2S.NIGHT_STEAL, () => {
+  safeOn(socket, C2S.NIGHT_STEAL, () => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
     if (room.phase !== GamePhase.NIGHT) return;
@@ -61,7 +72,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.handleNightSteal(socket.id);
   });
 
-  socket.on(C2S.NIGHT_READY, () => {
+  safeOn(socket, C2S.NIGHT_READY, () => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
     if (room.phase !== GamePhase.NIGHT) return;
@@ -69,7 +80,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.handleNightReady(socket.id);
   });
 
-  socket.on(C2S.ACCOMPLICE_SELECT, (data: { targetIds: string[] }) => {
+  safeOn(socket, C2S.ACCOMPLICE_SELECT, (data: { targetIds: string[] }) => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
     if (room.phase !== GamePhase.ACCOMPLICE) return;
@@ -77,7 +88,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.handleAccompliceSelect(socket.id, data.targetIds);
   });
 
-  socket.on(C2S.SEND_MESSAGE, (data: { content: string }) => {
+  safeOn(socket, C2S.SEND_MESSAGE, (data: { content: string }) => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
     if (room.phase !== GamePhase.DAY) return;
@@ -85,7 +96,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.handleMessage(socket.id, data.content);
   });
 
-  socket.on(C2S.CAST_VOTE, (data: { targetId: string }) => {
+  safeOn(socket, C2S.CAST_VOTE, (data: { targetId: string }) => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
     if (room.phase !== GamePhase.VOTING) return;
@@ -93,7 +104,7 @@ export function registerGameHandlers(socket: Socket, io: Server, roomManager: Ro
     room.handleVote(socket.id, data.targetId);
   });
 
-  socket.on(C2S.BACK_TO_LOBBY, () => {
+  safeOn(socket, C2S.BACK_TO_LOBBY, () => {
     const room = getRoomForSocket(socket, roomManager);
     if (!room) return;
     if (room.phase !== GamePhase.RESULT) return;

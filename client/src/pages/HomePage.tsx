@@ -1,17 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import { useGameStore } from '@/hooks/useGameStore'
 import { useSocket } from '@/hooks/useSocket'
 import { C2S, S2C } from '@shared/events'
+import { GamePhase } from '@shared/types'
 
 const AVATAR_COUNT = 8
 
 export default function HomePage() {
   const navigate = useNavigate()
   const socket = useSocket()
-  const [name, setName] = useState('')
+  const storedRoomCode = useGameStore((s) => s.roomCode)
+  const phase = useGameStore((s) => s.phase)
+  const storedName = useGameStore((s) => s.myName)
+  const [name, setName] = useState(storedName ?? '')
+
+  useEffect(() => {
+    if (storedRoomCode) {
+      if (phase !== GamePhase.LOBBY) {
+        navigate(`/game/${storedRoomCode}`)
+      } else {
+        navigate(`/lobby/${storedRoomCode}`)
+      }
+    }
+  }, [storedRoomCode, phase, navigate])
   const [showJoin, setShowJoin] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [error, setError] = useState('')
@@ -19,25 +34,46 @@ export default function HomePage() {
 
   const avatarIndex = Math.floor(Math.random() * AVATAR_COUNT)
 
-  function handleCreate() {
-    if (!name.trim()) {
-      setError('请输入你的名字')
+  function emitWithTimeout(emitFn: () => void) {
+    if (!socket.connected) {
+      setError('未连接到服务器，请检查网络后刷新页面')
       return
     }
     setError('')
     setLoading(true)
 
+    const timeout = setTimeout(() => {
+      socket.off(S2C.ROOM_STATE)
+      socket.off(S2C.ERROR)
+      setLoading(false)
+      setError('服务器无响应，请刷新页面重试')
+    }, 10_000)
+
     socket.once(S2C.ROOM_STATE, (data: { roomCode: string }) => {
+      clearTimeout(timeout)
+      socket.off(S2C.ERROR)
       setLoading(false)
       navigate(`/lobby/${data.roomCode}`)
     })
 
     socket.once(S2C.ERROR, (data: { message: string }) => {
+      clearTimeout(timeout)
+      socket.off(S2C.ROOM_STATE)
       setLoading(false)
       setError(data.message)
     })
 
-    socket.emit(C2S.CREATE_ROOM, { name: name.trim(), avatarIndex })
+    emitFn()
+  }
+
+  function handleCreate() {
+    if (!name.trim()) {
+      setError('请输入你的名字')
+      return
+    }
+    emitWithTimeout(() => {
+      socket.emit(C2S.CREATE_ROOM, { name: name.trim(), avatarIndex })
+    })
   }
 
   function handleJoin() {
@@ -49,23 +85,12 @@ export default function HomePage() {
       setError('请输入房间号')
       return
     }
-    setError('')
-    setLoading(true)
-
-    socket.once(S2C.ROOM_STATE, (data: { roomCode: string }) => {
-      setLoading(false)
-      navigate(`/lobby/${data.roomCode}`)
-    })
-
-    socket.once(S2C.ERROR, (data: { message: string }) => {
-      setLoading(false)
-      setError(data.message)
-    })
-
-    socket.emit(C2S.JOIN_ROOM, {
-      roomCode: joinCode.trim().toUpperCase(),
-      name: name.trim(),
-      avatarIndex,
+    emitWithTimeout(() => {
+      socket.emit(C2S.JOIN_ROOM, {
+        roomCode: joinCode.trim().toUpperCase(),
+        name: name.trim(),
+        avatarIndex,
+      })
     })
   }
 

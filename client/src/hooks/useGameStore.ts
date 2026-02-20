@@ -48,7 +48,7 @@ const initialSettings: GameSettings = {
 }
 
 export const useGameStore = create<GameStore>((set) => ({
-  roomCode: null,
+  roomCode: sessionStorage.getItem('roomCode'),
   phase: GamePhase.LOBBY,
   players: [],
   settings: initialSettings,
@@ -59,17 +59,27 @@ export const useGameStore = create<GameStore>((set) => ({
   result: null,
 
   myPlayerId: null,
-  myName: null,
-  sessionToken: localStorage.getItem('sessionToken'),
+  myName: sessionStorage.getItem('myName'),
+  sessionToken: sessionStorage.getItem('sessionToken'),
 
-  setMyInfo: (id, name) => set({ myPlayerId: id, myName: name }),
+  setMyInfo: (id, name) => {
+    sessionStorage.setItem('myName', name)
+    set({ myPlayerId: id, myName: name })
+  },
 
   setSessionToken: (token) => {
-    localStorage.setItem('sessionToken', token)
+    sessionStorage.setItem('sessionToken', token)
     set({ sessionToken: token })
   },
 
-  setRoomCode: (code) => set({ roomCode: code }),
+  setRoomCode: (code) => {
+    if (code) {
+      sessionStorage.setItem('roomCode', code)
+    } else {
+      sessionStorage.removeItem('roomCode')
+    }
+    set({ roomCode: code })
+  },
 
   updateGameState: (state) =>
     set({
@@ -84,7 +94,10 @@ export const useGameStore = create<GameStore>((set) => ({
       result: state.result,
     }),
 
-  reset: () =>
+  reset: () => {
+    sessionStorage.removeItem('sessionToken')
+    sessionStorage.removeItem('roomCode')
+    sessionStorage.removeItem('myName')
     set({
       roomCode: null,
       phase: GamePhase.LOBBY,
@@ -95,5 +108,9 @@ export const useGameStore = create<GameStore>((set) => ({
       day: null,
       vote: null,
       result: null,
-    }),
+      myPlayerId: null,
+      myName: null,
+      sessionToken: null,
+    })
+  },
 }))

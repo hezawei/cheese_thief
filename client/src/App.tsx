@@ -5,6 +5,7 @@ import LobbyPage from '@/pages/LobbyPage'
 import GamePage from '@/pages/GamePage'
 import SvgPreview from '@/pages/SvgPreview'
 import VoiceOverlay from '@/components/VoiceOverlay'
+import ConnectionStatus from '@/components/ConnectionStatus'
 import { useGameStore } from '@/hooks/useGameStore'
 
 function VoiceLayer() {
@@ -16,6 +17,7 @@ function VoiceLayer() {
 function App() {
   return (
     <BrowserRouter>
+      <ConnectionStatus />
       <MobileContainer>
         <Routes>
           <Route path="/" element={<HomePage />} />

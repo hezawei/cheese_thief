@@ -57,6 +57,7 @@ export default function LobbyPage() {
 
   function handleLeave() {
     socket.emit(C2S.LEAVE_ROOM)
+    useGameStore.getState().reset()
     navigate('/')
   }
 

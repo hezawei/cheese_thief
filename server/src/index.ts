@@ -8,7 +8,15 @@ import { RoomManager } from './game/RoomManager';
 import { registerRoomHandlers } from './socket/roomHandler';
 import { registerGameHandlers } from './socket/gameHandler';
 import { registerVoiceHandlers } from './socket/voiceHandler';
-import { log } from './utils/logger';
+import { log, error as logError } from './utils/logger';
+
+process.on('uncaughtException', (err) => {
+  logError('FATAL', 'Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  logError('FATAL', 'Unhandled rejection:', reason);
+});
 
 const app = express();
 app.use(cors({ origin: CORS_ORIGIN }));
@@ -30,9 +38,17 @@ app.get('/health', (_req, res) => {
 
 io.on('connection', (socket) => {
   log('socket', `connected: ${socket.id}`);
-  registerRoomHandlers(socket, io, roomManager);
-  registerGameHandlers(socket, io, roomManager);
-  registerVoiceHandlers(socket, io, roomManager);
+  try {
+    registerRoomHandlers(socket, io, roomManager);
+    registerGameHandlers(socket, io, roomManager);
+    registerVoiceHandlers(socket, io, roomManager);
+  } catch (err) {
+    logError('socket', `Failed to register handlers for ${socket.id}:`, err);
+  }
+
+  socket.on('error', (err) => {
+    logError('socket', `Socket error on ${socket.id}:`, err);
+  });
 });
 
 httpServer.listen(SERVER_PORT, () => {

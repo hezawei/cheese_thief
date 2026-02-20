@@ -13,7 +13,7 @@ import { TIMING } from '../config';
 import { getRules, buildRoleDeck } from '../../../shared/rules';
 import { S2C } from '../../../shared/events';
 import { shuffle } from '../utils/shuffle';
-import { log, warn } from '../utils/logger';
+import { log, warn, error as logError } from '../utils/logger';
 import { muteAllParticipants, unmuteAllParticipants, unmuteSpecificParticipants } from '../voice/roomController';
 
 export class GameRoom {
@@ -130,9 +130,23 @@ export class GameRoom {
 
   broadcastRoomUpdate(): void {
     for (const player of this.players) {
-      const state = buildClientState(this, player.id);
-      this.emitToPlayer(player.id, S2C.GAME_STATE, state);
+      try {
+        const state = buildClientState(this, player.id);
+        this.emitToPlayer(player.id, S2C.GAME_STATE, state);
+      } catch (err) {
+        logError('broadcast', `Failed to build/send state for ${player.name}:`, err);
+      }
     }
+  }
+
+  private safeTick(fn: () => void): () => void {
+    return () => {
+      try {
+        fn();
+      } catch (err) {
+        logError('tick', `Timer callback error in ${this.roomCode}:`, err);
+      }
+    };
   }
 
   isEmpty(): boolean {
@@ -158,9 +172,9 @@ export class GameRoom {
     this.broadcastRoomUpdate();
     log('game', `Dealing in ${this.roomCode}, thief=${this.thiefId}`);
 
-    this.nightTimer = setTimeout(() => {
+    this.nightTimer = setTimeout(this.safeTick(() => {
       this.forceAllDealingReady();
-    }, 30_000);
+    }), 30_000);
   }
 
   markDealingReady(playerId: string, chosenWakeDice: number | null): void {
@@ -217,7 +231,7 @@ export class GameRoom {
     muteAllParticipants(this.roomCode);
     this.broadcastRoomUpdate();
     log('night', `Broadcast done, delaying before first dice`);
-    this.nightTimer = setTimeout(() => this.advanceNightDice(), 1500);
+    this.nightTimer = setTimeout(this.safeTick(() => this.advanceNightDice()), 1500);
   }
 
   private advanceNightDice(): void {
@@ -240,7 +254,7 @@ export class GameRoom {
     if (awake.length === 0) {
       muteAllParticipants(this.roomCode);
       this.broadcastRoomUpdate();
-      this.nightTimer = setTimeout(() => this.advanceNightDice(), TIMING.nightEmptyPauseMs);
+      this.nightTimer = setTimeout(this.safeTick(() => this.advanceNightDice()), TIMING.nightEmptyPauseMs);
       return;
     }
 
@@ -344,11 +358,11 @@ export class GameRoom {
     this.nightTurnDeadline = Date.now() + TIMING.nightTurnTimeoutSeconds * 1000;
     this.broadcastRoomUpdate();
     this.clearTimer('night');
-    this.nightTimer = setTimeout(() => {
+    this.nightTimer = setTimeout(this.safeTick(() => {
       log('night', `Dice ${this.nightCurrentDice}: timeout`);
       this.forceStealIfNeeded();
       this.advanceNightDice();
-    }, TIMING.nightTurnTimeoutSeconds * 1000);
+    }), TIMING.nightTurnTimeoutSeconds * 1000);
   }
 
   private forceStealIfNeeded(): void {
@@ -492,9 +506,9 @@ export class GameRoom {
     // Selection data is now delivered via broadcastRoomUpdate → ViewBuilder
     this.broadcastRoomUpdate();
 
-    this.nightTimer = setTimeout(() => {
+    this.nightTimer = setTimeout(this.safeTick(() => {
       this.autoSelectAccomplice();
-    }, this.settings.accompliceSelectSeconds * 1000);
+    }), this.settings.accompliceSelectSeconds * 1000);
   }
 
   handleAccompliceSelect(playerId: string, targetIds: string[]): void {
@@ -537,7 +551,7 @@ export class GameRoom {
     // Reveal data is now delivered via broadcastRoomUpdate → ViewBuilder
     this.broadcastRoomUpdate();
 
-    this.nightTimer = setTimeout(() => this.startDayPhase(), 5000);
+    this.nightTimer = setTimeout(this.safeTick(() => this.startDayPhase()), 5000);
   }
 
   private resolveNaturalAccomplice(): void {
@@ -563,9 +577,9 @@ export class GameRoom {
     unmuteAllParticipants(this.roomCode);
     this.broadcastRoomUpdate();
 
-    this.dayTimer = setTimeout(() => {
+    this.dayTimer = setTimeout(this.safeTick(() => {
       this.startVotePhase();
-    }, this.settings.dayDiscussionSeconds * 1000);
+    }), this.settings.dayDiscussionSeconds * 1000);
   }
 
   handleMessage(playerId: string, content: string): void {
@@ -599,9 +613,9 @@ export class GameRoom {
 
     this.broadcastRoomUpdate();
 
-    this.voteTimer = setTimeout(() => {
+    this.voteTimer = setTimeout(this.safeTick(() => {
       this.forceEndVoting();
-    }, this.settings.votingSeconds * 1000);
+    }), this.settings.votingSeconds * 1000);
   }
 
   handleVote(playerId: string, targetId: string): void {
