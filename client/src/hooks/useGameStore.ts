@@ -11,6 +11,7 @@ import type {
 } from '@shared/types'
 import { GamePhase } from '@shared/types'
 import {
+  DEFAULT_ACCOMPLICE_SELECT_SECONDS,
   DEFAULT_DAY_DISCUSSION_SECONDS,
   DEFAULT_NIGHT_ACTION_SECONDS,
   DEFAULT_VOTING_SECONDS,
@@ -41,6 +42,7 @@ interface GameStore {
 const initialSettings: GameSettings = {
   useScapegoat: false,
   nightActionSeconds: DEFAULT_NIGHT_ACTION_SECONDS,
+  accompliceSelectSeconds: DEFAULT_ACCOMPLICE_SELECT_SECONDS,
   dayDiscussionSeconds: DEFAULT_DAY_DISCUSSION_SECONDS,
   votingSeconds: DEFAULT_VOTING_SECONDS,
 }
